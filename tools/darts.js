@@ -32,6 +32,33 @@ const GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swifts
   for (const pathId of ['baton', 'pelle', 'onde']) {
     await p.evaluate(id => __game.startRun(id, 0, { mode: 'histoire', diff: 1 }), pathId);
     await p.waitForFunction(() => __game.G.P && __game.G.st);
+    if (pathId === 'baton') {
+      const fan = await p.evaluate(() => {
+        const G = __game.G, P = G.P;
+        P.yaw = 0; P.pitch = 0; P.fireCd = 0; G.st.beatWin = 0;
+        G.enemies.splice(0, G.enemies.length);
+        const place = ang => {
+          const x = P.x + Math.sin(ang) * 1.6, z = P.z - Math.cos(ang) * 1.6;
+          const e = __game.spawn('cone', { x, z });
+          e.x = x; e.z = z; e.y = 0; e.born = 1; e.mk.root.position.set(x, 0, z);
+          return e;
+        };
+        const a = place(0), b = place(20 * Math.PI / 180);
+        __game.attack(false);
+        return { idA: a.id, idB: b.id, dmg: G.st.dmg };
+      });
+      const both = await p.waitForFunction(({ idA, idB }) => {
+        const left = id => { const e = __game.G.enemies.find(x => x.id === id); return e ? e.hpMax - e.hp : null; };
+        return left(idA) > 0.4 && left(idB) > 0.4;
+      }, { idA: fan.idA, idB: fan.idB }, { timeout: 4000 }).then(() => true).catch(() => false);
+      const losses = await p.evaluate(({ idA, idB }) => {
+        const loss = id => { const e = __game.G.enemies.find(x => x.id === id); return e ? e.hpMax - e.hp : null; };
+        return { a: loss(idA), b: loss(idB) };
+      }, fan);
+      const oneSwing = v => v != null && Math.abs(v - fan.dmg) < 1;
+      if (!both || !oneSwing(losses.a) || !oneSwing(losses.b)) failed.push('baton volée ' + JSON.stringify({ both, losses, dmg: fan.dmg }));
+      else console.log('baton volée', JSON.stringify(losses));
+    }
     const fired = await p.evaluate(async () => {
       const G = __game.G, P = G.P;
       P.yaw = 0; P.pitch = 0; P.fireCd = 0; P.altCd = 0;

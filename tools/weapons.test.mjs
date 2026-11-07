@@ -96,6 +96,7 @@ test('the old stick launches a short foam fan, not a melee hit', () => {
     assert.equal(s.group, true);
     assert.equal(s.band, 3.6);
     assert.equal(s.dmg, 30);
+    assert.equal(s.knock, 9);
     assert.ok(Math.abs(s.speed * s.life - (st.range + 0.85)) < 1e-9);
   }
   const wide = weaponStats('baton', lvOf({ b_arc: 3 }));
@@ -115,10 +116,11 @@ test('the repeater and the popper launch foam darts', () => {
   assert.equal(one.shots.length, 1);
   assert.equal(one.shots[0].pierce, 1);
   assert.equal(one.shots[0].dmg, 8.5);
+  assert.equal(one.shots[0].knock, 1.5);
   assert.ok(Math.abs(one.shots[0].speed * one.shots[0].life - 60) < 1e-9);
   const burst = buildFoamShots('pelle', pelle, true, () => 0.5);
   assert.equal(burst.shots.length, 9);
-  assert.ok(burst.shots.every(s => s.kind === 'dart' && s.foam && s.orange && s.dmg === 9));
+  assert.ok(burst.shots.every(s => s.kind === 'dart' && s.foam && s.orange && s.dmg === 9 && s.knock === 6));
   const onde = weaponStats('onde', lv0);
   const pop = primaries('onde', onde);
   assert.equal(pop.shots.length, 1);

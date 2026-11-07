@@ -58,7 +58,7 @@ export function buildFoamShots(path, st, alt, rand = Math.random) {
       const life = (st.range + 0.85) / speed;
       for (let i = 0; i < n; i++) {
         const t = n === 1 ? 0 : (i / (n - 1) - 0.5);
-        shots.push(shot(path, { yaw: t * st.arc, speed, life, dmg: st.dmg, pierce: 1, r: 0.28, scale: 1, group: true, band: 3.6 }));
+        shots.push(shot(path, { yaw: t * st.arc, speed, life, dmg: st.dmg, pierce: 1, r: 0.28, scale: 1, group: true, band: 3.6, knock: 9 }));
       }
     } else {
       shots.push(shot(path, { speed: 42, life: 1.6, dmg: st.altDmg, pierce: st.pierce, r: 0.36, scale: 1.75, heavy: true }));
@@ -71,7 +71,7 @@ export function buildFoamShots(path, st, alt, rand = Math.random) {
     for (let k = 0; k < n; k++) {
       shots.push(shot(path, {
         yaw: (rand() - 0.5) * spread * 2, pitch: (rand() - 0.5) * spread * 2,
-        speed, life: dist / speed, dmg: alt ? st.altDmg : st.dmg,
+        speed, life: dist / speed, dmg: alt ? st.altDmg : st.dmg, knock: alt ? 6 : 1.5,
         pierce: alt ? 1 : st.pierce, r: alt ? 0.16 : 0.2, scale: alt ? 0.8 : 1,
       }));
     }

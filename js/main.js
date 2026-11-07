@@ -193,21 +193,16 @@ function addDart(spec, pos, vel, on) {
   m.visible = true; m.scale.setScalar(spec.scale || 1); m.position.copy(pos);
   m.lookAt(pos.x + vel.x, pos.y + vel.y, pos.z + vel.z); scene.add(m);
   G.foamLaunched = (G.foamLaunched || 0) + 1;
-  const p = { kind: 'dart', pool: poolKey, m, pos: m.position, vel, life: spec.life, r: (spec.r || 0.2) * (isTouch && !spec.visual ? 1.25 : 1), dmg: spec.dmg, pierce: spec.visual ? 0 : (spec.pierce || 1), boom: spec.boom || 0, foam: true, orange: true, visual: !!spec.visual, group: spec.group || 0, band: spec.band || 0, on, owner: 'p', hit: new Set(), grav: 0, trail: spec.visual ? 0 : (on ? 0xff3fd2 : 0xfff2c4), heavy: !!spec.heavy };
+  const p = { kind: 'dart', pool: poolKey, m, pos: m.position, vel, life: spec.life, r: (spec.r || 0.2) * (isTouch && !spec.visual ? 1.25 : 1), dmg: spec.dmg, pierce: spec.visual ? 0 : (spec.pierce || 1), boom: spec.boom || 0, foam: true, orange: true, visual: !!spec.visual, group: spec.group || 0, band: spec.band || 0, knock: spec.knock, on, owner: 'p', hit: new Set(), grav: 0, trail: spec.visual ? 0 : (on ? 0xff3fd2 : 0xfff2c4), heavy: !!spec.heavy };
   G.projs.push(p); return p;
 }
-function segClosest(a, b, c) {
-  const abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z;
+function segHit(a, b, c, horizontal) {
+  const abx = b.x - a.x, aby = horizontal ? 0 : b.y - a.y, abz = b.z - a.z;
   const ab2 = abx * abx + aby * aby + abz * abz || 1e-8;
-  let t = ((c.x - a.x) * abx + (c.y - a.y) * aby + (c.z - a.z) * abz) / ab2;
+  let t = ((c.x - a.x) * abx + (horizontal ? 0 : (c.y - a.y) * aby) + (c.z - a.z) * abz) / ab2;
   t = t < 0 ? 0 : t > 1 ? 1 : t;
-  return Math.hypot(a.x + abx * t - c.x, a.y + aby * t - c.y, a.z + abz * t - c.z);
-}
-function horizClosest(a, b, c) {
-  const abx = b.x - a.x, abz = b.z - a.z, ab2 = abx * abx + abz * abz || 1e-8;
-  let t = ((c.x - a.x) * abx + (c.z - a.z) * abz) / ab2;
-  t = t < 0 ? 0 : t > 1 ? 1 : t;
-  return Math.hypot(a.x + abx * t - c.x, a.z + abz * t - c.z);
+  const dx = a.x + abx * t - c.x, dy = horizontal ? 0 : a.y + (b.y - a.y) * t - c.y, dz = a.z + abz * t - c.z;
+  return { t, dist: Math.hypot(dx, dy, dz) };
 }
 function offsetDir(dir, yaw, pitch) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
@@ -698,13 +693,19 @@ function updProjs(dt) {
         for (const e of G.enemies) { if (e.dead || e.untouchable || p.hit.has(e)) continue;
           if (p.group) { e.hitGroups = e.hitGroups || new Set(); if (e.hitGroups.has(p.group)) continue; }
           const c = eCenter(e); const reach = Math.max(e.T.r, e.T.h * 0.45) + p.r;
-          const dist = p.kind === 'dart' ? (p.band ? (e.y <= p.band ? horizClosest(p.from, p.pos, c) : 1e9) : segClosest(p.from, p.pos, c)) : c.distanceTo(p.pos);
-          if (dist < reach) hits.push({ e, dist }); }
-        hits.sort((a, b) => a.dist - b.dist);
+          let along;
+          if (p.kind !== 'dart') { const d = c.distanceTo(p.pos); along = { t: d, dist: d }; }
+          else if (p.band && e.y > p.band) continue;
+          else along = segHit(p.from, p.pos, c, !!p.band);
+          if (along.dist < reach) hits.push({ e, t: along.t }); }
+        hits.sort((a, b) => a.t - b.t);
         for (const h of hits) { const e = h.e;
           if (p.group) { if (e.hitGroups.has(p.group)) continue; e.hitGroups.add(p.group); }
           if (p.boom) { explode(p); done = true; break; }
-          p.hit.add(e); dmgEnemy(e, p.dmg, p.on, p.vel.x * 0.3, p.vel.z * 0.3); if (--p.pierce <= 0 || p.pierce === undefined || isNaN(p.pierce)) { done = true; break; } }
+          const sp = Math.hypot(p.vel.x, p.vel.z) || 1;
+          const kx = p.knock == null ? p.vel.x * 0.3 : p.vel.x / sp * p.knock;
+          const kz = p.knock == null ? p.vel.z * 0.3 : p.vel.z / sp * p.knock;
+          p.hit.add(e); dmgEnemy(e, p.dmg, p.on, kx, kz); if (--p.pierce <= 0 || p.pierce === undefined || isNaN(p.pierce)) { done = true; break; } }
       }
       if (!done && p.boom && !p.visual && (p.pos.y < 0.15 || p.life <= 0)) { explode(p); done = true; }
       if (done || p.life <= 0 || p.pos.y < 0) freeProj(p);
@@ -714,6 +715,8 @@ function updProjs(dt) {
       if (p.life <= 0 || p.pos.y < 0.1) { fx.burst(p.pos, [0xffffff], 6, 3, 0.2, 0.3); freeProj(p); }
     } }
   G.projs = G.projs.filter(p => !p.dead);
+  const liveGroups = new Set(); for (const p of G.projs) if (p.group) liveGroups.add(p.group);
+  for (const e of G.enemies) if (e.hitGroups) for (const id of [...e.hitGroups]) if (!liveGroups.has(id)) e.hitGroups.delete(id);
   for (const s of G.shocks) { s.r += s.spd * dt; const d = Math.hypot(P.x - s.x, P.z - s.z); if (!s.hit && Math.abs(d - s.r) < 0.9) { s.hit = true; hurt(s.dmg); P.kx += (P.x - s.x) / (d || 1) * 10; P.kz += (P.z - s.z) / (d || 1) * 10; } }
   G.shocks = G.shocks.filter(s => s.r < s.max);
 }

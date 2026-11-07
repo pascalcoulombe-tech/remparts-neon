@@ -3,7 +3,8 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const BASE = '/remparts-neon';
-const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const T = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+function contentType(file) { return T[path.posix.extname(String(file))] || 'application/octet-stream'; }
 
 function mapUrl(url) {
   let p = decodeURIComponent(String(url || '/').split('?')[0]);
@@ -27,10 +28,11 @@ module.exports = function serve(port = 8765) {
     const f = path.resolve(ROOT, rel);
     const fromRoot = path.relative(ROOT, f);
     if (fromRoot.startsWith('..') || path.isAbsolute(fromRoot) || !fs.existsSync(f) || !fs.statSync(f).isFile()) { r.writeHead(404); return r.end(); }
-    r.writeHead(200, { 'Content-Type': T[path.extname(f)] || 'application/octet-stream' });
+    r.writeHead(200, { 'Content-Type': contentType(f) });
     fs.createReadStream(f).pipe(r);
   });
   return new Promise(res => s.listen(port, () => res(s)));
 };
 module.exports.mapUrl = mapUrl;
+module.exports.contentType = contentType;
 if (require.main === module) module.exports(+process.argv[2] || 8765).then(() => console.log('http://localhost:' + (+process.argv[2] || 8765) + '/remparts-neon/'));
