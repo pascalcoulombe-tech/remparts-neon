@@ -2,3 +2,5 @@ node_modules/
 shots/try*
 shots/smoke*
 audio-demo/
+
+shots/bot_*.png
