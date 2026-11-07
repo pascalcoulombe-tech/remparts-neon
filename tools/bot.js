@@ -1,10 +1,10 @@
 // Bot de test Playwright : lance une partie, vise/tire sur l'ennemi le plus proche (via le point d'entrée de test),
 // survit aux vagues, achète des améliorations, et vérifie qu'il n'y a aucune erreur JS.
 // usage : node tools/bot.js [baton|pelle|onde] [quartier de départ 0-2] [préfixe captures]   (env Q=low|high, PORT, MAXMIN)
-const { chromium } = require('/workspace/pw/node_modules/playwright');
-const serve = require('./serve'); const fs = require('fs');
+const { chromium } = require('playwright');
+const serve = require('./serve'); const fs = require('fs'); const path = require('path');
 const PATH = process.argv[2] || 'pelle', START = +(process.argv[3] || 0), PRE = process.argv[4] || ('bot_' + PATH), PORT = +(process.env.PORT || 8770);
-const SH = '/workspace/neon-quebec/shots/'; const MAXMS = (+(process.env.MAXMIN || 40)) * 60000;
+const SH = path.join(__dirname, '..', 'shots') + path.sep; const MAXMS = (+(process.env.MAXMIN || 40)) * 60000;
 
 function botBrain() {
   const B = { side: 1, flip: 0 };
@@ -62,7 +62,7 @@ function botBrain() {
   const DIFFI = +(process.env.DIFF ?? 1), MODE = process.env.MODE || 'histoire';
   await p.addInitScript(([d, m]) => { try { const k = 'remparts-neon-v1'; const sv = JSON.parse(localStorage.getItem(k) || '{}'); sv.diff = d; sv.mode = m; localStorage.setItem(k, JSON.stringify(sv)); } catch (e) {} }, [DIFFI, MODE]);
   await p.addInitScript(botBrain); if (process.env.STILL) await p.addInitScript(() => { window.__STILL = 1; });
-  await p.goto(`http://localhost:${PORT}/?bot=1${process.env.Q ? '&q=' + process.env.Q : ''}`); await p.waitForTimeout(3000);
+  await p.goto(`http://localhost:${PORT}/remparts-neon/?bot=1${process.env.Q ? '&q=' + process.env.Q : ''}`); await p.waitForTimeout(3000);
   const shots = []; const snap = async name => { const f = SH + PRE + '_' + name + '.png'; await p.screenshot({ path: f }); shots.push(f); console.log('capture', f); };
   if (START === 0) await snap('1_titre');
   if (START > 0) await p.evaluate(s => { const sv = JSON.parse(localStorage.getItem('remparts-neon-v1') || '{}'); sv.unlocked = s; localStorage.setItem('remparts-neon-v1', JSON.stringify(sv)); }, START);

@@ -1,0 +1,15 @@
+{
+  "name": "remparts-neon",
+  "private": true,
+  "description": "Remparts Néon, jeu navigateur. Playwright sert seulement aux tests.",
+  "scripts": {
+    "test": "node --test tools/weapons.test.mjs tools/serve.test.mjs",
+    "start": "node tools/serve.js 8765",
+    "darts": "node tools/darts.js",
+    "touch": "node tools/touch.js",
+    "bot": "node tools/bot.js"
+  },
+  "devDependencies": {
+    "playwright": "1.57.0"
+  }
+}

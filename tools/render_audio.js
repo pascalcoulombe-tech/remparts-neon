@@ -1,5 +1,5 @@
 // Rend les thèmes en WAV (hors ligne) : node tools/render_audio.js <before|after> [scènes séparées par virgule]
-const { chromium } = require('/workspace/pw/node_modules/playwright');
+const { chromium } = require('playwright');
 const PORT = +(process.env.PORT || 8797);
 const serve = require('./serve'); const fs = require('fs');
 const WHO = process.argv[2] || 'after'; const SRC = WHO === 'before' ? '/audio-demo/before-src/audio.js' : '/js/audio.js';

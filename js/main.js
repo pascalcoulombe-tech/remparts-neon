@@ -9,12 +9,12 @@ import { LEVELS, buildLevel } from './world.js';
 import { TYPES, makeEnemy, animate } from './enemies.js';
 import { FX } from './fx.js';
 import { LINES, DJ, PATHS } from './text.js';
+import { SAVE_KEY, ORANGE, WEAPON_UPGRADES, weaponStats, buildFoamShots } from './weapons.js';
 import { initFullscreen, isFullscreen, toggleFullscreen } from './fullscreen.js';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 const isTouch = Q.has('touch') || (matchMedia('(pointer: coarse)').matches && 'ontouchstart' in window);
-const SAVE_KEY = 'remparts-neon-v1';
 let saved = {}; try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) {}
 const save = Object.assign({ vol: 0.8, mvol: 1, svol: 1, sens: 1, qual: isTouch ? 'low' : 'high', auto: true, unlocked: 0, best: 0, shake: 1, nums: true, vib: true, diff: 1, mode: 'histoire', scores: [] }, saved);
 if (Q.get('q')) save.qual = Q.get('q');
@@ -72,35 +72,19 @@ const UPG = [
   { id: 'regen', name: 'Café filtre', desc: 'Régénère 1,5 PV/s quand on ne te touche pas', max: 3, cost: [60, 110, 170], c: '#ffb43a' },
   { id: 'boom', name: 'Feux de la Saint-Jean', desc: 'Les ennemis éliminés explosent en feux d\'artifice', max: 3, cost: [70, 120, 180], c: '#ff3fd2' },
   { id: 'xtra', name: 'Heures supplémentaires', desc: '+5 % de dégâts (achat illimité ou presque)', max: 20, cost: Array.from({ length: 20 }, (_, i) => 60 + i * 25), c: '#8dff3a' },
-  { id: 'b_dmg', path: 'baton', name: 'Ruban de friction', desc: '+25 % de dégâts', max: 5, cost: [40, 60, 90, 130, 170], c: '#ff3fd2' },
-  { id: 'b_arc', path: 'baton', name: 'Palette courbée', desc: 'Coup plus large et plus long', max: 3, cost: [45, 80, 130], c: '#ffd23a' },
-  { id: 'b_puck', path: 'baton', name: 'Lancer frappé', desc: 'Rondelle : recharge −25 %, perce +1', max: 3, cost: [45, 80, 130], c: '#2bf0ff' },
-  { id: 'b_leech', path: 'baton', name: 'Mise en échec', desc: '+3 PV par élimination', max: 3, cost: [40, 75, 120], c: '#8dff3a' },
-  { id: 'p_dmg', path: 'pelle', name: 'Sel de déglaçage', desc: '+20 % de dégâts', max: 5, cost: [40, 60, 90, 130, 170], c: '#ffb43a' },
-  { id: 'p_rate', path: 'pelle', name: 'Gâchette chauffée', desc: '+15 % de cadence', max: 5, cost: [40, 60, 90, 130, 170], c: '#ff3fd2' },
-  { id: 'p_burst', path: 'pelle', name: 'Grosse bordée', desc: 'Clic droit : +3 plombs, recharge −15 %', max: 3, cost: [45, 80, 130], c: '#2bf0ff' },
-  { id: 'p_pierce', path: 'pelle', name: 'Grenaille de glace', desc: 'Les tirs traversent 1 ennemi de plus', max: 2, cost: [70, 135], c: '#8dff3a' },
-  { id: 'o_dmg', path: 'onde', name: 'Condensateur boréal', desc: '+20 % de dégâts', max: 5, cost: [40, 60, 90, 130, 170], c: '#2bf0ff' },
-  { id: 'o_rad', path: 'onde', name: 'Résonance', desc: 'Explosions plus grosses', max: 4, cost: [45, 75, 110, 160], c: '#ff3fd2' },
-  { id: 'o_pulse', path: 'onde', name: 'Pulsation', desc: 'Clic droit : recharge −20 %, +30 % dégâts', max: 3, cost: [45, 80, 130], c: '#ffd23a' },
-  { id: 'o_chain', path: 'onde', name: 'Arc électrique', desc: 'Chaque explosion frappe +1 ennemi proche', max: 3, cost: [50, 90, 140], c: '#8dff3a' },
+  ...WEAPON_UPGRADES,
 ];
 function computeStats() {
   const lv = id => G.up[id] || 0, p = G.path;
   const s = { spd: (p === 'baton' ? 7.4 : 6.8) * (1 + 0.1 * lv('spd')), dashMax: 1 + (lv('dash') >= 2 ? 1 : 0), dashCd: 1.7 * (1 - 0.15 * lv('dash')),
     beatWin: 0.085 + 0.025 * lv('beat'), beatMul: 1.5 + 0.25 * lv('beat'), crit: 0.08 * lv('crit'), armor: 1 - 0.08 * lv('armor'), regen: 1.5 * lv('regen'), boom: lv('boom'), gdmg: 1 + 0.05 * lv('xtra'), magnet: 3.5 + 2.5 * lv('mag'), cashMul: 1 + 0.1 * lv('mag'), hpMax: (p === 'baton' ? 125 : 100) + 25 * lv('hp') };
-  if (p === 'baton') Object.assign(s, { dmg: 30 * (1 + 0.25 * lv('b_dmg')), rate: 0.42, range: 2.9 + 0.35 * lv('b_arc'), arc: (100 + 18 * lv('b_arc')) * Math.PI / 180,
-    altCd: 2.4 * Math.pow(0.75, lv('b_puck')), altDmg: 55 * (1 + 0.25 * lv('b_dmg')) * (1 + 0.2 * lv('b_puck')), pierce: 2 + lv('b_puck'), leech: 1 + 3 * lv('b_leech'), altName: 'RONDELLE' });
-  if (p === 'pelle') Object.assign(s, { dmg: 8.5 * (1 + 0.2 * lv('p_dmg')), rate: 1 / (7.5 * (1 + 0.15 * lv('p_rate'))), spread: 0.014, pierce: 1 + lv('p_pierce'),
-    altCd: 1.6 * Math.pow(0.85, lv('p_burst')), pellets: 9 + 3 * lv('p_burst'), altDmg: 9 * (1 + 0.2 * lv('p_dmg')), leech: 0, altName: 'BORDÉE' });
-  if (p === 'onde') Object.assign(s, { dmg: 24 * (1 + 0.2 * lv('o_dmg')), rate: 1 / 3.2, radius: 2.4 + 0.6 * lv('o_rad'), chain: lv('o_chain'),
-    altCd: 5 * Math.pow(0.8, lv('o_pulse')), altDmg: 45 * (1 + 0.3 * lv('o_pulse')) * (1 + 0.2 * lv('o_dmg')), pulseR: 7.5 + lv('o_pulse'), leech: 0, altName: 'PULSATION' });
+  Object.assign(s, weaponStats(p, lv));
   G.st = s; if (G.P) G.P.hpMax = s.hpMax;
 }
 
 // ---------- État ----------
 const G = { state: 'title', li: 0, wi: 0, path: 'baton', cash: 0, score: 0, kills: 0, up: {}, P: null, enemies: [], projs: [], shocks: [], level: null, wave: null,
-  t: 0, streak: 0, bestStreak: 0, shake: 0, hitstop: 0, timers: [], lastBeat: -1, secT: -99, pulse: 0, deaths: 0, beatHits: 0, shots: 0, snap: null, st: null, magnetAll: 0, cap: 16 };
+  t: 0, streak: 0, bestStreak: 0, shake: 0, hitstop: 0, timers: [], lastBeat: -1, secT: -99, pulse: 0, deaths: 0, beatHits: 0, shots: 0, snap: null, st: null, magnetAll: 0, cap: 16, foamLaunched: 0 };
 const input = { keys: new Set(), fire: false, alt: false, mdx: 0, mdy: 0, tmx: 0, tmz: 0, tfire: false, padMx: 0, padMz: 0, padFire: false, padAlt: false, botMx: 0, botMz: 0, botFire: false, botAlt: false, dashReq: false, altReq: false, lastPad: false };
 const later = (t, fn) => G.timers.push({ t, fn });
 
@@ -119,6 +103,7 @@ const flashTex = (() => { const c = document.createElement('canvas'); c.width = 
   const g = x.createRadialGradient(0, 0, 0, 0, 0, 16); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(-16, -16, 32, 32); return new THREE.CanvasTexture(c); })();
 function buildViewmodel() {
   while (vm.children.length) { const c = vm.children.pop(); disposeTree(c); }
+  vm.userData.trail = null; vm.userData.orb = null; vm.userData.shell = null;
   vmGlow = []; const p = G.path; const g = new THREE.Group(); vm.add(g); const pulseMats = [];
   const M = (c, e = 0.3) => new THREE.MeshLambertMaterial({ color: new THREE.Color(c).multiplyScalar(0.6), emissive: new THREE.Color(c).multiplyScalar(e * 0.5) });
   const B = c => new THREE.MeshBasicMaterial({ color: c });
@@ -126,49 +111,46 @@ function buildViewmodel() {
   const box = (w, h, d, x, y, z, mat, rx = 0, ry = 0, rz = 0, par = g) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); par.add(m); return m; };
   const cyl = (r1, r2, h, x, y, z, mat, rx = 0, ry = 0, rz = 0, par = g, seg = 10) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); par.add(m); return m; };
   const glove = (x, y, z, par = g) => { box(0.09, 0.075, 0.11, x, y, z, M(0x1a1030, 0.3), 0, 0, 0, par); box(0.092, 0.012, 0.112, x, y + 0.03, z, PB(0x2bf0ff), 0, 0, 0, par); };
-  let tip = new V3(0, 0, -1);
+  const orangeTip = (r, len, x, y, z) => { const mesh = cyl(r, r * 0.82, len, x, y, z, new THREE.MeshBasicMaterial({ color: ORANGE }), Math.PI / 2, 0, 0, g, 8); mesh.userData.orangeTip = true; return mesh; };
+  let tip = new V3(0, 0, -0.5);
   if (p === 'baton') {
-    const shaft = M(0x221a33); box(0.045, 0.045, 1.0, 0, 0, -0.35, shaft); box(0.047, 0.012, 0.86, 0, 0.022, -0.4, PB(0xff3fd2));
-    for (let i = 0; i < 4; i++) box(0.05, 0.05, 0.025, 0, 0, -0.02 - i * 0.04, B(0xeeeeee), 0, 0, 0.3);
-    box(0.06, 0.06, 0.05, 0, 0, 0.14, B(0xffffff));
-    const bl = M(0x221a33); box(0.12, 0.1, 0.04, -0.06, -0.02, -0.86, bl, 0, 0.1); box(0.1, 0.09, 0.04, -0.16, -0.03, -0.875, bl, 0, 0.35); box(0.06, 0.08, 0.035, -0.23, -0.035, -0.9, bl, 0, 0.6);
-    box(0.22, 0.02, 0.045, -0.12, 0.035, -0.87, PB(0xff3fd2), 0, 0.3); box(0.22, 0.02, 0.045, -0.12, -0.075, -0.87, PB(0x2bf0ff), 0, 0.3);
-    glove(0.0, -0.02, 0.06); glove(0.0, -0.02, -0.32);
-    g.rotation.set(-0.35, 0.35, -0.25); g.position.set(0.02, 0.02, 0.1);
-    // traînée du coup de bâton
-    const tr = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.95, 24, 1, Math.PI * 0.15, Math.PI * 0.7), new THREE.MeshBasicMaterial({ color: 0xff3fd2, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    tr.rotation.set(-1.25, 0, 0); tr.position.set(-0.3, 0.05, -0.55); vm.add(tr); vm.userData.trail = tr;
+    box(0.08, 0.18, 0.09, 0, -0.12, 0.08, M(0x2a1038, 0.25));
+    box(0.12, 0.1, 0.34, 0, 0, -0.08, M(0xff3fd2, 0.55));
+    box(0.05, 0.014, 0.22, 0, 0.055, -0.06, PB(0x2bf0ff));
+    box(0.09, 0.07, 0.09, 0, 0.08, -0.02, M(0xff7ae0, 0.4));
+    cyl(0.05, 0.05, 0.2, 0, 0.015, -0.32, M(0x241428, 0.3), Math.PI / 2, 0, 0, g, 8);
+    orangeTip(0.055, 0.09, 0, 0.015, -0.46);
+    glove(0, -0.08, 0.02);
+    g.rotation.set(0.08, 0.12, -0.04);
+    tip = new V3(0, 0.015, -0.5);
   } else if (p === 'pelle') {
-    const wood = M(0x6a4422, 0.25); cyl(0.024, 0.024, 0.9, 0, 0, 0, wood, Math.PI / 2);
-    const dg = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.013, 6, 14, Math.PI), M(0x222222)); dg.position.set(0, 0, 0.5); dg.rotation.set(0, Math.PI / 2, Math.PI / 2); g.add(dg); box(0.13, 0.024, 0.024, 0, 0, 0.56, M(0x222222));
-    cyl(0.032, 0.032, 0.08, 0, 0, -0.42, M(0x888899, 0.3), Math.PI / 2);
-    const blade = M(0xffb43a, 0.55); box(0.34, 0.02, 0.36, 0, -0.03, -0.62, blade, -0.15); box(0.02, 0.06, 0.34, -0.17, 0.0, -0.62, blade, -0.15); box(0.02, 0.06, 0.34, 0.17, 0.0, -0.62, blade, -0.15);
-    box(0.36, 0.03, 0.025, 0, -0.06, -0.8, B(0xffffff), -0.15); box(0.08, 0.002, 0.08, 0, -0.018, -0.6, B(0xffffff), -0.15, 0.78);
-    for (const sx of [-0.05, 0.05]) cyl(0.016, 0.016, 0.72, sx, -0.085, -0.34, PB(0x2bf0ff), Math.PI / 2);
-    for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.008, 4, 14), PB(0xff3fd2)); r.position.set(0, -0.085, -0.15 - i * 0.12); g.add(r); }
-    cyl(0.045, 0.045, 0.12, 0, -0.13, -0.05, M(0x223344), Math.PI / 2); cyl(0.035, 0.035, 0.124, 0, -0.13, -0.05, new THREE.MeshBasicMaterial({ color: 0x9ff4ff, transparent: true, opacity: 0.7 }), Math.PI / 2);
-    glove(0, -0.04, 0.45); glove(0, -0.04, -0.2);
-    g.rotation.set(0.05, 0.08, 0); tip = new V3(0, -0.085, -0.72);
+    box(0.07, 0.16, 0.1, 0, -0.11, 0.22, M(0x3a2414, 0.25));
+    box(0.08, 0.07, 0.22, 0, 0, 0.28, M(0xc47a22, 0.35));
+    box(0.09, 0.08, 0.62, 0, 0.01, -0.12, M(0xffb43a, 0.5));
+    box(0.03, 0.012, 0.4, 0, 0.055, -0.14, PB(0x2bf0ff));
+    cyl(0.03, 0.03, 0.48, 0, 0.02, -0.42, M(0x2a2418, 0.25), Math.PI / 2, 0, 0, g, 8);
+    orangeTip(0.034, 0.1, 0, 0.02, -0.71);
+    glove(0, -0.06, 0.16); glove(0, -0.02, -0.05);
+    g.rotation.set(0.04, 0.06, 0);
+    tip = new V3(0, 0.02, -0.76);
   } else {
-    const plate = M(0x1a1a4a, 0.4); box(0.11, 0.09, 0.3, 0.02, -0.11, 0.2, plate); box(0.116, 0.012, 0.31, 0.02, -0.06, 0.2, PB(0x2bf0ff)); box(0.12, 0.1, 0.06, 0.02, -0.1, 0.06, M(0x2a2a6a, 0.5));
-    for (let i = 0; i < 3; i++) { const f = box(0.022, 0.022, 0.09, -0.02 + i * 0.03, -0.06, -0.01, plate, 0.7); f.position.y += 0.0; }
-    cyl(0.03, 0.03, 0.1, 0.02, -0.11, 0.38, PB(0xff3fd2), Math.PI / 2);
-    const orb = new THREE.Group(); orb.position.set(0, 0, -0.06); g.add(orb); vm.userData.orb = orb;
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), B(0xdffcff)); orb.add(core);
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshBasicMaterial({ color: 0x2bf0ff, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false })); orb.add(shell); vm.userData.shell = shell;
-    for (let i = 0; i < 3; i++) { const moon = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 4), PB([0xff3fd2, 0xffd23a, 0x8dff3a][i])); moon.userData.moon = i; orb.add(moon); }
-    g.position.set(-0.04, 0.08, -0.32); g.rotation.set(0.15, -0.1, 0); tip = new V3(0, 0, -0.06);
+    box(0.08, 0.16, 0.09, 0.02, -0.12, 0.16, M(0x14143a, 0.35));
+    cyl(0.075, 0.075, 0.16, 0, 0, -0.02, M(0x2bf0ff, 0.55), Math.PI / 2, 0, 0, g, 10);
+    box(0.1, 0.012, 0.14, 0, 0.08, -0.02, PB(0xff3fd2));
+    cyl(0.032, 0.032, 0.28, 0, 0, -0.24, M(0x1a2048, 0.35), Math.PI / 2, 0, 0, g, 8);
+    orangeTip(0.038, 0.09, 0, 0, -0.42);
+    glove(0.02, -0.08, 0.12);
+    g.rotation.set(0.1, -0.08, 0);
+    tip = new V3(0, 0, -0.46);
   }
-  // éclair de bouche
-  const mf = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, color: p === 'onde' ? 0x7ff4ff : 0xffe0a0, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); mf.visible = false; mf.scale.setScalar(0.22);
+  const mf = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, color: 0xffb060, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); mf.visible = false; mf.scale.setScalar(0.16);
   g.add(mf); mf.position.copy(tip); vm.userData.mflash = mf; vm.userData.pulseMats = pulseMats;
   const n = UPG.filter(u => u.path === p).reduce((a, u) => a + (G.up[u.id] || 0), 0);
   const cols = [0xff3fd2, 0x2bf0ff, 0xffd23a, 0x8dff3a];
   for (let i = 0; i < Math.min(n, 12); i++) {
-    if (p === 'onde') { const r = new THREE.Mesh(new THREE.TorusGeometry(0.13 + (i % 3) * 0.02, 0.003, 4, 24), B(cols[i % 4])); r.position.set(-0.04, 0.08, -0.38); r.rotation.set(Math.random() * 3, Math.random() * 3, 0); r.userData.spin = (i % 2 ? 1 : -1) * (1.5 + i * 0.3); vm.add(r); vmGlow.push(r); }
-    else { const r = new THREE.Mesh(new THREE.TorusGeometry(p === 'pelle' ? 0.03 : 0.035, 0.008, 4, 12), B(cols[i % 4]));
-      if (p === 'pelle') { r.position.set(0, 0, 0.3 - i * 0.04); } else { r.position.set(0, 0, -0.2 - i * 0.055); }
-      g.add(r); r.userData.spin = 0; vmGlow.push(r); } }
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.006, 4, 10), B(cols[i % 4]));
+    r.position.set(0, 0.02, -0.02 - i * 0.04); g.add(r); r.userData.spin = (i % 2 ? 1 : -1) * 0.6; vmGlow.push(r);
+  }
   vm.userData.g = g;
 }
 
@@ -188,7 +170,52 @@ function addProj(kind, pos, vel, o) {
   m.material = o.mat ? projMat[o.mat] : projMat[kind]; m.position.copy(pos); m.visible = true; scene.add(m);
   const p = Object.assign({ kind, m, pos: m.position, vel, life: 3, r: 0.3, hit: new Set(), grav: 0 }, o); G.projs.push(p); return p;
 }
-function freeProj(p) { scene.remove(p.m); (pool[p.kind] || (pool[p.kind] = [])).push(p.m); p.dead = true; }
+function freeProj(p) { scene.remove(p.m); const key = p.pool || p.kind; (pool[key] || (pool[key] = [])).push(p.m); p.dead = true; }
+const dartBodyGeo = new THREE.BoxGeometry(0.09, 0.09, 0.42); dartBodyGeo.userData.shared = true;
+const dartTipGeo = new THREE.BoxGeometry(0.11, 0.11, 0.16); dartTipGeo.userData.shared = true;
+const dartFinGeo = new THREE.BoxGeometry(0.28, 0.045, 0.14); dartFinGeo.userData.shared = true;
+const dartTipMat = new THREE.MeshBasicMaterial({ color: ORANGE });
+const dartBodyMat = { baton: new THREE.MeshBasicMaterial({ color: 0xff4fd8 }), pelle: new THREE.MeshBasicMaterial({ color: 0xffe14a }), onde: new THREE.MeshBasicMaterial({ color: 0x7af6ff }), heavy: new THREE.MeshBasicMaterial({ color: 0xfff2a8 }) };
+function makeDartMesh(key) {
+  const g = new THREE.Group();
+  const mat = dartBodyMat[key] || dartBodyMat.pelle;
+  const body = new THREE.Mesh(dartBodyGeo, mat);
+  const fin = new THREE.Mesh(dartFinGeo, mat); fin.position.z = -0.08;
+  const tip = new THREE.Mesh(dartTipGeo, dartTipMat); tip.position.z = 0.28; tip.userData.orangeTip = true;
+  g.add(body); g.add(fin); g.add(tip); return g;
+}
+let volleySeq = 1;
+function addDart(spec, pos, vel, on) {
+  const key = spec.heavy ? 'heavy' : spec.path;
+  const poolKey = 'dart:' + key;
+  const list = pool[poolKey] || (pool[poolKey] = []);
+  let m = list.pop(); if (!m) m = makeDartMesh(key);
+  m.visible = true; m.scale.setScalar(spec.scale || 1); m.position.copy(pos);
+  m.lookAt(pos.x + vel.x, pos.y + vel.y, pos.z + vel.z); scene.add(m);
+  G.foamLaunched = (G.foamLaunched || 0) + 1;
+  const p = { kind: 'dart', pool: poolKey, m, pos: m.position, vel, life: spec.life, r: (spec.r || 0.2) * (isTouch && !spec.visual ? 1.25 : 1), dmg: spec.dmg, pierce: spec.visual ? 0 : (spec.pierce || 1), boom: spec.boom || 0, foam: true, orange: true, visual: !!spec.visual, group: spec.group || 0, band: spec.band || 0, on, owner: 'p', hit: new Set(), grav: 0, trail: spec.visual ? 0 : (on ? 0xff3fd2 : 0xfff2c4), heavy: !!spec.heavy };
+  G.projs.push(p); return p;
+}
+function segClosest(a, b, c) {
+  const abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z;
+  const ab2 = abx * abx + aby * aby + abz * abz || 1e-8;
+  let t = ((c.x - a.x) * abx + (c.y - a.y) * aby + (c.z - a.z) * abz) / ab2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(a.x + abx * t - c.x, a.y + aby * t - c.y, a.z + abz * t - c.z);
+}
+function horizClosest(a, b, c) {
+  const abx = b.x - a.x, abz = b.z - a.z, ab2 = abx * abx + abz * abz || 1e-8;
+  let t = ((c.x - a.x) * abx + (c.z - a.z) * abz) / ab2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(a.x + abx * t - c.x, a.z + abz * t - c.z);
+}
+function offsetDir(dir, yaw, pitch) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const x = dir.x * cy + dir.z * sy, z = -dir.x * sy + dir.z * cy, y = dir.y;
+  const cp = Math.cos(pitch), sp = Math.sin(pitch), horiz = Math.hypot(x, z) || 1;
+  const y2 = y * cp + horiz * sp, h2 = Math.max(0.0001, horiz * cp - y * sp);
+  return new V3(x / horiz * h2, y2, z / horiz * h2).normalize();
+}
 
 // ---------- Ennemis ----------
 let eid = 0;
@@ -306,16 +333,9 @@ function onBossBeat(e, b) {
 }
 
 // ---------- Combat du joueur ----------
-const tmpV = new V3();
 function aimDir() { const P = G.P; return new V3(-Math.sin(P.yaw) * Math.cos(P.pitch), Math.sin(P.pitch), -Math.cos(P.yaw) * Math.cos(P.pitch)); }
 function eyePos() { return new V3(G.P.x, 1.62, G.P.z); }
 function eCenter(e) { return new V3(e.x, e.y + e.T.h * 0.55 * (e.T.boss && e.type !== 'tram' ? 1 : 1), e.z); }
-function rayHits(o, d, maxD, fat = 1) {
-  const hits = [];
-  for (const e of G.enemies) { if (e.dead || e.untouchable) continue; const c = eCenter(e); const r = Math.max(e.T.r, e.T.h * 0.45) * fat * (isTouch ? 1.3 : 1.05);
-    tmpV.copy(c).sub(o); const t = tmpV.dot(d); if (t < 0 || t > maxD) continue; const d2 = tmpV.lengthSq() - t * t; if (d2 < r * r) hits.push({ e, t }); }
-  return hits.sort((a, b) => a.t - b.t);
-}
 function beatErr() { const t = music.clock() - music.latency(); const bp = music.beatPos(t); return Math.abs(bp - Math.round(bp)) * SPB; }
 function judge(text, cls) { const j = $('judge'); j.textContent = text; j.className = 'on ' + (cls || ''); G.judgeT = 0.45; }
 function judgeBeat() {
@@ -353,37 +373,36 @@ function killEnemy(e, on) {
 }
 function attack(alt) {
   const P = G.P, st = G.st; if (!P || P.dead) return;
-  const on = judgeBeat(); const mul = on ? st.beatMul : 1; const o = eyePos(), d = aimDir(); G.shots++;
-  const muzzle = o.clone().add(d.clone().multiplyScalar(0.6)).add(new V3(Math.cos(P.yaw) * 0.25, -0.22, -Math.sin(P.yaw) * 0.25));
+  const on = judgeBeat(); const mul = on ? st.beatMul : 1; const d = aimDir(); G.shots++;
+  const muzzle = eyePos().add(d.clone().multiplyScalar(0.6)).add(new V3(Math.cos(P.yaw) * 0.25, -0.22, -Math.sin(P.yaw) * 0.25));
   if (on) { $('cross').classList.add('hit'); G.crossT = 0.15; }
-  G.mflashT = G.path === 'baton' ? 0 : 0.05;
-  if (G.path === 'baton') {
-    if (!alt) { G.swing = 1; music.shoot('baton', on); const fw = new V3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
-      let n = 0; for (const e of G.enemies.slice()) { if (e.dead) continue; const ex = e.x - P.x, ez = e.z - P.z, dd = Math.hypot(ex, ez); if (dd > st.range + e.T.r || e.y > 3.6) continue;
-        const ang = Math.acos(clamp((ex * fw.x + ez * fw.z) / (dd || 1), -1, 1)); if (ang > st.arc / 2 && dd > e.T.r + 0.3) continue;
-        dmgEnemy(e, st.dmg * mul, on, ex / (dd || 1) * 9, ez / (dd || 1) * 9); n++; }
-      // renvoie les projectiles ennemis (« retour à l'envoyeur »)
-      for (const p of G.projs) if (p.owner === 'e' && !p.dead) { const ex = p.pos.x - P.x, ez = p.pos.z - P.z, dd = Math.hypot(ex, ez); if (dd < st.range + 0.6 && (ex * fw.x + ez * fw.z) / (dd || 1) > Math.cos(st.arc / 2)) {
-        p.owner = 'p'; p.vel.copy(d).multiplyScalar(26); p.dmg = st.dmg * 1.2; p.m.material = projMat.refl; p.life = 2; floatText(p.pos.clone(), 'RETOUR À L\'ENVOYEUR!', '#ff3fd2', false, 0.9); } }
-      const arcC = on ? [0xff3fd2, 0xffffff, 0x2bf0ff] : [0xff3fd2, 0xffffff];
-      for (let i = 0; i < (on ? 22 : 12); i++) { const a = P.yaw + (Math.random() - 0.5) * st.arc; const r = st.range * rnd(0.5, 1); fx.burst(new V3(P.x - Math.sin(a) * r, 1.2 + rnd(-0.3, 0.3), P.z - Math.cos(a) * r), arcC, 1, 1.5, 0.22, 0.25, 0, 0); }
-      if (n) G.shake = Math.min(1, G.shake + 0.12);
-    } else { music.shoot('puck', on); addProj('puck', muzzle, d.clone().multiplyScalar(42), { owner: 'p', dmg: st.altDmg * mul, pierce: st.pierce, life: 1.6, r: 0.4, on, trail: on ? 0xff3fd2 : 0x2bf0ff }); }
-  } else if (G.path === 'pelle') {
-    const shotsN = alt ? st.pellets : 1, spread = alt ? 0.085 : st.spread; music.shoot(alt ? 'bordee' : 'pelle', on);
-    for (let k = 0; k < shotsN; k++) { const dd = d.clone(); dd.x += (Math.random() - 0.5) * spread * 2; dd.y += (Math.random() - 0.5) * spread * 2; dd.z += (Math.random() - 0.5) * spread * 2; dd.normalize();
-      const hits = rayHits(o, dd, alt ? 22 : 60, alt ? 1 : 1); const pierce = alt ? 1 : st.pierce; let endT = alt ? 22 : 60;
-      for (let i = 0; i < Math.min(pierce, hits.length); i++) { const h = hits[i]; const at = o.clone().add(dd.clone().multiplyScalar(h.t)); dmgEnemy(h.e, (alt ? st.altDmg : st.dmg) * mul, on, dd.x * (alt ? 6 : 1.5), dd.z * (alt ? 6 : 1.5), at); endT = h.t; }
-      fx.tracer(muzzle, o.clone().add(dd.multiplyScalar(endT)), on ? 0xff3fd2 : 0xffd27a); }
-    G.recoil = alt ? 1 : 0.35; if (alt) G.shake = Math.min(1, G.shake + 0.2);
-  } else {
-    if (!alt) { music.shoot('onde', on); addProj('orb', muzzle, d.clone().multiplyScalar(30), { owner: 'p', dmg: st.dmg * mul, life: 1.8, r: 0.35, boom: st.radius * (on ? 1.35 : 1), on, mat: on ? 'orbB' : 'orb', trail: on ? 0xff3fd2 : 0x2bf0ff }); G.recoil = 0.5; }
-    else { music.shoot('pulse', on); const R = st.pulseR; fx.ring(new V3(P.x, 0, P.z), 0x2bf0ff, 0.5, R, 0.4); fx.ring(new V3(P.x, 0.8, P.z), on ? 0xff3fd2 : 0xffffff, 0.5, R * 0.9, 0.35);
-      fx.burst(new V3(P.x, 1, P.z), [0x2bf0ff, 0xffffff, 0xff3fd2], 60, 14, 0.3, 0.5, 0, 0);
-      for (const e of G.enemies.slice()) { const ex = e.x - P.x, ez = e.z - P.z, dd = Math.hypot(ex, ez); if (dd < R + e.T.r) dmgEnemy(e, st.altDmg * mul * (1 - 0.4 * dd / R), on, ex / (dd || 1) * 16, ez / (dd || 1) * 16); }
-      for (const p of G.projs) if (p.owner === 'e' && p.pos.distanceTo(new V3(P.x, 1.2, P.z)) < R) { freeProj(p); }
-      G.shake = Math.min(1, G.shake + 0.4); }
+  G.mflashT = 0.06; G.recoil = alt ? 0.85 : 0.4;
+  const plan = buildFoamShots(G.path, st, alt);
+  const gid = plan.shots.some(s => s.group) ? ++volleySeq : 0;
+  const right = new V3(Math.cos(P.yaw), 0, -Math.sin(P.yaw));
+  for (const s of plan.shots) {
+    const dir = s.world ? new V3(Math.cos(s.yaw), 0.12, Math.sin(s.yaw)).normalize() : offsetDir(d, s.yaw, s.pitch);
+    const pos = muzzle.clone();
+    if (!s.world) pos.addScaledVector(right, s.yaw * 0.12).add(new V3(0, s.pitch * 0.12, 0));
+    const boom = s.boom ? s.boom * (on ? 1.35 : 1) : 0;
+    addDart(Object.assign({}, s, { boom, dmg: s.visual ? 0 : s.dmg * mul, group: s.group ? gid : 0 }), pos, dir.multiplyScalar(s.speed), on);
   }
+  if (plan.reflectArc) {
+    const fw = new V3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
+    for (const p of G.projs) if (p.owner === 'e' && !p.dead && p.m && p.m.material) { const ex = p.pos.x - P.x, ez = p.pos.z - P.z, dd = Math.hypot(ex, ez); if (dd < st.range + 0.6 && (ex * fw.x + ez * fw.z) / (dd || 1) > Math.cos(st.arc / 2)) {
+      p.owner = 'p'; p.vel.copy(d).multiplyScalar(26); p.dmg = st.dmg * 1.2; p.m.material = projMat.refl; p.life = 2; floatText(p.pos.clone(), 'RETOUR À L\'ENVOYEUR!', '#ff3fd2', false, 0.9); } }
+  }
+  if (plan.pulse) {
+    const R = plan.pulse.radius, pdmg = plan.pulse.dmg * mul;
+    fx.ring(new V3(P.x, 0, P.z), 0x2bf0ff, 0.5, R, 0.4); fx.ring(new V3(P.x, 0.8, P.z), on ? 0xff3fd2 : 0xffffff, 0.5, R * 0.9, 0.35);
+    fx.burst(new V3(P.x, 1, P.z), [0xfff2c4, 0xffffff, 0x2bf0ff], 40, 12, 0.28, 0.45, 0, 0);
+    for (const e of G.enemies.slice()) { const ex = e.x - P.x, ez = e.z - P.z, dd = Math.hypot(ex, ez); if (dd < R + e.T.r) dmgEnemy(e, pdmg * (1 - 0.4 * dd / R), on, ex / (dd || 1) * 16, ez / (dd || 1) * 16); }
+    for (const p of G.projs) if (p.owner === 'e' && p.pos.distanceTo(new V3(P.x, 1.2, P.z)) < R) freeProj(p);
+    G.shake = Math.min(1, G.shake + 0.4);
+  }
+  const kind = G.path === 'baton' ? (alt ? 'puck' : 'baton') : G.path === 'pelle' ? (alt ? 'bordee' : 'pelle') : (alt ? 'pulse' : 'onde');
+  music.shoot(kind, on);
+  if (alt && G.path === 'pelle') G.shake = Math.min(1, G.shake + 0.2);
 }
 function explode(p) {
   const R = p.boom; fx.burst(p.pos, p.on ? [0xff3fd2, 0xffffff, 0x2bf0ff] : [0x2bf0ff, 0xffffff, 0x4f6bff], 34, 9, 0.35, 0.5, 2, 1); fx.ring(new V3(p.pos.x, Math.max(0, p.pos.y - 1), p.pos.z), p.on ? 0xff3fd2 : 0x2bf0ff, 0.3, R, 0.3);
@@ -595,9 +614,9 @@ function navMove(dir) { const f = focusables(); if (!f.length) return; const cur
 
 // ---------- Menus ----------
 const ICONS = {
-  baton: '<svg viewBox="0 0 120 50"><path d="M20 4 L70 40 L104 40" stroke="#ff3fd2" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="96" cy="22" r="6" fill="#2bf0ff"/></svg>',
-  pelle: '<svg viewBox="0 0 120 50"><path d="M10 25 L70 25" stroke="#ffb43a" stroke-width="6" stroke-linecap="round"/><path d="M70 10 L104 14 L104 36 L70 40 Z" fill="none" stroke="#ffb43a" stroke-width="5"/><path d="M40 33 L100 33" stroke="#2bf0ff" stroke-width="4"/></svg>',
-  onde: '<svg viewBox="0 0 120 50"><circle cx="60" cy="25" r="10" fill="#fff"/><circle cx="60" cy="25" r="17" fill="none" stroke="#2bf0ff" stroke-width="4"/><circle cx="60" cy="25" r="23" fill="none" stroke="#ff3fd2" stroke-width="2"/></svg>',
+  baton: '<svg viewBox="0 0 120 50"><rect x="18" y="20" width="48" height="14" rx="4" fill="#ff3fd2"/><rect x="66" y="22" width="22" height="8" fill="#241428"/><rect x="88" y="20" width="14" height="12" rx="2" fill="#ff6a00"/><rect x="100" y="16" width="12" height="5" rx="2" fill="#fff"/><rect x="110" y="16" width="6" height="5" fill="#ff6a00"/></svg>',
+  pelle: '<svg viewBox="0 0 120 50"><rect x="8" y="20" width="70" height="10" rx="3" fill="#ffb43a"/><rect x="78" y="18" width="16" height="12" fill="#ff6a00"/><rect x="30" y="10" width="28" height="4" fill="#2bf0ff"/><rect x="96" y="14" width="8" height="4" fill="#fff"/><rect x="104" y="14" width="8" height="4" fill="#ff6a00"/><rect x="96" y="22" width="8" height="4" fill="#fff"/><rect x="104" y="22" width="8" height="4" fill="#ff6a00"/><rect x="96" y="30" width="8" height="4" fill="#fff"/><rect x="104" y="30" width="8" height="4" fill="#ff6a00"/></svg>',
+  onde: '<svg viewBox="0 0 120 50"><circle cx="42" cy="25" r="14" fill="#2bf0ff"/><rect x="54" y="20" width="28" height="10" rx="3" fill="#1a2048"/><rect x="82" y="18" width="12" height="14" rx="2" fill="#ff6a00"/><circle cx="104" cy="25" r="5" fill="#fff"/><circle cx="104" cy="25" r="9" fill="none" stroke="#ff6a00" stroke-width="3"/></svg>',
 };
 let pickLi = 0;
 function renderPaths() {
@@ -668,14 +687,26 @@ function updPlayer(dt) {
 }
 function updProjs(dt) {
   const P = G.P;
-  for (const p of G.projs) { if (p.dead) continue; p.life -= dt; p.vel.y -= p.grav * dt; p.pos.addScaledVector(p.vel, dt);
+  for (const p of G.projs) { if (p.dead) continue; p.life -= dt; if (!p.from) p.from = new V3(); p.from.copy(p.pos); p.vel.y -= p.grav * dt; p.pos.addScaledVector(p.vel, dt);
     if (p.kind === 'inv' || p.kind === 'tick') { p.m.rotation.y += dt * p.spin; p.m.rotation.x += dt * p.spin * 0.6; } if (p.kind === 'puck') p.m.rotation.y += dt * 20;
-    if (p.trail && Math.random() < 0.7) fx.burst(p.pos, [p.trail], 1, 0.5, 0.3, 0.3, 0, 0);
+    if (p.kind === 'dart' && (p.vel.x || p.vel.y || p.vel.z)) p.m.lookAt(p.pos.x + p.vel.x, p.pos.y + p.vel.y, p.pos.z + p.vel.z);
+    if (p.trail && Math.random() < (p.kind === 'dart' ? 0.22 : 0.7)) fx.burst(p.pos, [p.trail], 1, 0.5, 0.3, 0.3, 0, 0);
     if (p.owner === 'p') {
       let done = false;
-      for (const e of G.enemies) { if (e.dead || e.untouchable || p.hit.has(e)) continue; const c = eCenter(e); if (c.distanceTo(p.pos) < Math.max(e.T.r, e.T.h * 0.45) + p.r) {
-        if (p.boom) { explode(p); done = true; break; } p.hit.add(e); dmgEnemy(e, p.dmg, p.on, p.vel.x * 0.3, p.vel.z * 0.3); if (--p.pierce <= 0 || p.pierce === undefined || isNaN(p.pierce)) { done = true; break; } } }
-      if (!done && p.boom && (p.pos.y < 0.15 || p.life <= 0)) { explode(p); done = true; }
+      if (!p.visual) {
+        const hits = [];
+        for (const e of G.enemies) { if (e.dead || e.untouchable || p.hit.has(e)) continue;
+          if (p.group) { e.hitGroups = e.hitGroups || new Set(); if (e.hitGroups.has(p.group)) continue; }
+          const c = eCenter(e); const reach = Math.max(e.T.r, e.T.h * 0.45) + p.r;
+          const dist = p.kind === 'dart' ? (p.band ? (e.y <= p.band ? horizClosest(p.from, p.pos, c) : 1e9) : segClosest(p.from, p.pos, c)) : c.distanceTo(p.pos);
+          if (dist < reach) hits.push({ e, dist }); }
+        hits.sort((a, b) => a.dist - b.dist);
+        for (const h of hits) { const e = h.e;
+          if (p.group) { if (e.hitGroups.has(p.group)) continue; e.hitGroups.add(p.group); }
+          if (p.boom) { explode(p); done = true; break; }
+          p.hit.add(e); dmgEnemy(e, p.dmg, p.on, p.vel.x * 0.3, p.vel.z * 0.3); if (--p.pierce <= 0 || p.pierce === undefined || isNaN(p.pierce)) { done = true; break; } }
+      }
+      if (!done && p.boom && !p.visual && (p.pos.y < 0.15 || p.life <= 0)) { explode(p); done = true; }
       if (done || p.life <= 0 || p.pos.y < 0) freeProj(p);
     } else {
       const dx = p.pos.x - P.x, dy = p.pos.y - 1.25, dz = p.pos.z - P.z;
@@ -740,12 +771,11 @@ function frame() {
     camera.position.set(P.x + rnd(-sh, sh), 1.62 + Math.sin(P.bob * 1.6) * 0.04 + rnd(-sh, sh), P.z + rnd(-sh, sh)); camera.rotation.set(P.pitch, P.yaw, 0);
     G.fovKick = Math.max(0, (G.fovKick || 0) - dt * 4); const fov = 75 + G.fovKick * 9; if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
     // arme en main
-    const g = vm.userData.g; G.swing = Math.max(0, (G.swing || 0) - dt * 5); G.recoil = Math.max(0, (G.recoil || 0) - dt * 8);
-    if (g) { const sw = G.swing; vm.position.set(0.34 + Math.sin(P.bob * 0.8) * 0.015, -0.33 + Math.abs(Math.cos(P.bob * 0.8)) * 0.015 - G.recoil * 0.02, -0.62 + G.recoil * 0.06);
-      if (G.path === 'baton') { vm.rotation.set(-sw * 0.6, sw > 0 ? (sw - 0.5) * 2.4 : 0, sw * 0.8); } else vm.rotation.set(G.recoil * 0.15, 0, 0);
-      const ud = vm.userData; if (ud.orb) { ud.orb.rotation.y += dt * 2; ud.orb.scale.setScalar(1 + G.pulse * 0.15 + G.recoil * 0.2); ud.orb.children.forEach(c => { if (c.userData.moon !== undefined) { const a = G.t * 4 + c.userData.moon * 2.1; c.position.set(Math.cos(a) * 0.12, Math.sin(a * 1.3) * 0.05, Math.sin(a) * 0.12); } }); }
+    const g = vm.userData.g; G.recoil = Math.max(0, (G.recoil || 0) - dt * 8);
+    if (g) { vm.position.set(0.34 + Math.sin(P.bob * 0.8) * 0.015, -0.33 + Math.abs(Math.cos(P.bob * 0.8)) * 0.015 - G.recoil * 0.02, -0.62 + G.recoil * 0.06);
+      vm.rotation.set(G.recoil * 0.18, 0, 0);
+      const ud = vm.userData;
       if (ud.mflash) { G.mflashT = (G.mflashT || 0) - dt; ud.mflash.visible = G.mflashT > 0; if (ud.mflash.visible) { ud.mflash.material.rotation = Math.random() * 6; ud.mflash.scale.setScalar(0.16 + Math.random() * 0.14); } }
-      if (ud.trail) ud.trail.material.opacity = Math.max(0, sw - 0.2) * 1.2;
       if (ud.pulseMats) ud.pulseMats.forEach(m => m.color.copy(m.userData.base).multiplyScalar(0.55 + G.pulse * 0.6 + (G.beatFlash > 0 ? 0.5 : 0))); }
     vmGlow.forEach(r => { if (r.userData.spin) { r.rotation.x += dt * r.userData.spin; r.rotation.y += dt * r.userData.spin * 0.7; } });
     updHud(bp, sec);
@@ -763,7 +793,7 @@ function frame() {
 }
 
 // ---------- Point d'entrée de test ----------
-const API = { isFullscreen, toggleFullscreen, G, input, DIFF, waveDef, music, LEVELS, TYPES, UPG, startRun, buy, nextFromShop, retryWave, startWave, spawn, toTitle, costOf, stats: () => G.st, camera, fx, get frameAvg() { return frameAvg; } };
+const API = { isFullscreen, toggleFullscreen, G, input, DIFF, waveDef, music, LEVELS, TYPES, UPG, startRun, buy, nextFromShop, retryWave, startWave, spawn, toTitle, costOf, attack, viewmodel: () => vm, stats: () => G.st, camera, fx, get frameAvg() { return frameAvg; } };
 window.__game = API;
 if (Q.has('bot')) G.bot = true;
 initFullscreen({ onChange: reResize });

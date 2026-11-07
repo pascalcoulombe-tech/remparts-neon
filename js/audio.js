@@ -341,12 +341,12 @@ export class Music {
   snz(dur, type, f, v, delay = 0) { if (!this.ok()) return; this.nz(this.ctx.currentTime + delay, dur, type, f, v, this.sfx, 1); }
   scale(i) { const pent = [0, 3, 5, 7, 10]; return mtof(69 + this.key + pent[((i % 5) + 5) % 5] + 12 * Math.floor(i / 5)); }
   shoot(kind, onBeat) {
-    if (kind === 'baton') { this.snz(0.12, 'bandpass', onBeat ? 1800 : 1100, 0.3); this.tone('triangle', 300, 90, 0.1, 0.2); }
-    else if (kind === 'pelle') { this.snz(0.06, 'highpass', 2500, 0.16); this.tone('square', onBeat ? 900 : 600, 120, 0.05, 0.05); this.tone('sine', 160, 60, 0.07, 0.12); }
-    else if (kind === 'bordee') { this.snz(0.25, 'lowpass', 2200, 0.45); this.tone('sawtooth', 200, 50, 0.2, 0.18); }
-    else if (kind === 'onde') { this.tone('sine', onBeat ? 1320 : 880, 220, 0.16, 0.16); this.tone('square', 440, 110, 0.12, 0.035); }
-    else if (kind === 'puck') { this.snz(0.08, 'bandpass', 3000, 0.35); this.tone('square', 1200, 300, 0.1, 0.08); }
-    else if (kind === 'pulse') { this.tone('sine', 120, 30, 0.6, 0.45); this.snz(0.5, 'lowpass', 900, 0.35); }
+    if (kind === 'baton') { this.snz(0.09, 'bandpass', onBeat ? 1400 : 900, 0.22); this.tone('triangle', 520, 180, 0.08, 0.12); }
+    else if (kind === 'pelle') { this.snz(0.04, 'highpass', 4200, 0.12); this.tone('sine', onBeat ? 1500 : 1100, 400, 0.05, 0.06); }
+    else if (kind === 'bordee') { this.snz(0.14, 'bandpass', 1800, 0.28); this.tone('triangle', 340, 90, 0.12, 0.1); }
+    else if (kind === 'onde') { this.snz(0.1, 'bandpass', 1000, 0.16); this.tone('sine', onBeat ? 880 : 620, 180, 0.16, 0.12); }
+    else if (kind === 'puck') { this.snz(0.1, 'lowpass', 1600, 0.3); this.tone('triangle', 240, 70, 0.12, 0.16); }
+    else if (kind === 'pulse') { this.snz(0.28, 'bandpass', 700, 0.3); this.tone('sine', 180, 50, 0.35, 0.2); }
     if (onBeat) this.tone('triangle', this.scale(10), 0, 0.14, 0.07);
   }
   hit() { this.tone('square', 260 + Math.random() * 60, 120, 0.05, 0.045); }

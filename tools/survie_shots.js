@@ -1,12 +1,12 @@
 // Captures du mode Survie et du tableau des records (avec une mort forcée).
-const { chromium } = require('/workspace/pw/node_modules/playwright');
+const { chromium } = require('playwright');
 const serve = require('./serve');
 (async () => {
   const PORT = +(process.env.PORT || 8790), PRE = process.argv[2] || 'survie'; const srv = await serve(PORT);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const p = await b.newPage({ viewport: { width: 960, height: 540 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.goto(`http://localhost:${PORT}/?q=high`); await p.waitForTimeout(2500);
+  await p.goto(`http://localhost:${PORT}/remparts-neon/?q=high`); await p.waitForTimeout(2500);
   await p.click('#bPlay'); await p.waitForTimeout(400);
   await p.evaluate(() => { const f = t => [...document.querySelectorAll('#modepick .chip')].find(b => b.textContent === t).click(); f('Survie'); f('Normal'); });
   await p.waitForTimeout(300); await p.screenshot({ path: `shots/${PRE}-choix.png` });

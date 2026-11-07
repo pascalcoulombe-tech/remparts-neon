@@ -36,9 +36,9 @@ export const LINES = {
     'Tire sur le beat, ça fait plus mal. C\'est scientifique. Bon, c\'est pas prouvé, mais c\'est scientifique.',
   ],
   path: {
-    baton: 'Le bâton de hockey : la solution québécoise à tous les problèmes depuis toujours.',
-    pelle: 'La pelle-fusil, c\'est comme pelleter ton entrée, sauf que l\'entrée pellette en retour.',
-    onde: 'L\'Onde, c\'est de l\'énergie pure. Prépare-toi à une facture d\'électricité salée.',
+    baton: 'Le bâton-mousse lance un éventail de fléchettes. Court, large, et ça colle aux cônes.',
+    pelle: 'La pelle-mousse, c\'est une bordée de fléchettes en plastique. Personne se fait mal, sauf les zombies.',
+    onde: 'L\'Éclateur pète une fléchette qui éclate en nuage de mousse. La facture d\'électricité a pris sa retraite.',
   },
   brk: ['Respire, c\'est le breakdown.', 'Petite pause... non, y\'a pas de commanditaire.', 'Profites-en pour ramasser tes piasses!', 'On baisse le kick, on remonte le moral.'],
   drop: ['LA HORDE!', 'ATTACHE TA TUQUE!', 'ÇA DROPPE!', 'TIENS BON!'],
@@ -54,7 +54,7 @@ export const LINES = {
   win: 'T\'as sauvé Québec! La ville va te remercier avec un formulaire de remerciement à remplir en ligne. Le site est fermé les fins de semaine. Ici Ti-Guy Néon, bonne nuit!',
 };
 export const PATHS = {
-  baton: { name: 'Le Bâton', tag: 'Corps à corps', desc: 'Un bâton de hockey néon. Gros coups larges, rondelle au clic droit, plus de vie, plus rapide.', color: '#ff3fd2', stats: [5, 2, 4] },
-  pelle: { name: 'La Pelle-fusil', tag: 'Armes à feu', desc: 'Une pelle à neige qui tire du grésil à répétition. Clic droit : la Bordée, un gros coup de fusil.', color: '#ffb43a', stats: [3, 5, 3] },
-  onde:  { name: 'L\'Onde', tag: 'Énergie', desc: 'Des orbes boréales qui explosent en zone. Clic droit : une Pulsation qui repousse tout le monde.', color: '#2bf0ff', stats: [4, 3, 5] },
+  baton: { name: 'Le Bâton-mousse', tag: 'Fléchettes courtes', desc: 'Un blaster trapu en plastique rose. Éventail de fléchettes en mousse, grosse fléchette au clic droit, plus de vie, plus rapide.', color: '#ff3fd2', stats: [5, 2, 4] },
+  pelle: { name: 'La Pelle-mousse', tag: 'Rafale', desc: 'Un fusil-jouet qui crache des fléchettes en mousse à répétition. Clic droit : la Volée, une bordée de fléchettes.', color: '#ffb43a', stats: [3, 5, 3] },
+  onde:  { name: 'L\'Éclateur', tag: 'Zone de mousse', desc: 'Une fléchette en mousse qui éclate en nuage. Clic droit : un souffle de fléchettes qui repousse tout le monde.', color: '#2bf0ff', stats: [4, 3, 5] },
 };
