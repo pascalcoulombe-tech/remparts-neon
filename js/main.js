@@ -9,7 +9,7 @@ import { LEVELS, buildLevel } from './world.js';
 import { TYPES, makeEnemy, animate } from './enemies.js';
 import { FX } from './fx.js';
 import { LINES, DJ, PATHS } from './text.js';
-import { SAVE_KEY, ORANGE, WEAPON_UPGRADES, weaponStats, buildFoamShots } from './weapons.js';
+import { SAVE_KEY, ORANGE, WEAPON_UPGRADES, weaponStats, buildFoamShots } from './weapons.mjs';
 import { initFullscreen, isFullscreen, toggleFullscreen } from './fullscreen.js';
 
 const $ = id => document.getElementById(id);

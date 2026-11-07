@@ -4,7 +4,7 @@
 
 **Goal:** Replace Le Bâton, La Pelle-fusil, and L'Onde with original plastic toy blasters that all launch visible foam darts, without breaking ids, saves, or the rest of the game.
 
-**Architecture:** Pure shot planning lives in `js/weapons.js` (no Three.js) so node tests can lock counts, damage, and ids. `js/main.js` turns that plan into pooled dart meshes and keeps combat, shop, and waves. Copy for cards and radio stays in `js/text.js`. The static server accepts the GitHub Pages base `/remparts-neon/` and the existing `/` URLs.
+**Architecture:** Pure shot planning lives in `js/weapons.mjs` (no Three.js) so node tests can lock counts, damage, and ids. `js/main.js` turns that plan into pooled dart meshes and keeps combat, shop, and waves. Copy for cards and radio stays in `js/text.js`. The static server accepts the GitHub Pages base `/remparts-neon/` and the existing `/` URLs.
 
 **Tech Stack:** Vanilla ES modules, Three.js r170 already in `vendor/`, Node test runner, Playwright for the browser bots.
 

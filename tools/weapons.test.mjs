@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { SAVE_KEY, PATH_IDS, ORANGE, WEAPON_UPGRADES, weaponStats, buildFoamShots } from '../js/weapons.js';
-import { PATHS, LINES } from '../js/text.js';
+import { SAVE_KEY, PATH_IDS, ORANGE, WEAPON_UPGRADES, weaponStats, buildFoamShots } from '../js/weapons.mjs';
 
 const lv0 = () => 0;
 const lvOf = map => id => map[id] || 0;
@@ -24,11 +23,10 @@ test('upgrade ids stay and the copy describes foam toys', () => {
 });
 
 test('cards, radio, help, and readme describe foam darts', () => {
-  for (const id of PATH_IDS) {
-    const card = `${PATHS[id].name} ${PATHS[id].tag} ${PATHS[id].desc} ${LINES.path[id]}`;
-    assert.match(card, /mousse|fléchette/i);
-    assert.doesNotMatch(card, /hockey|mêlée|corps à corps|pelle-fusil|rondelle/i);
-  }
+  const copy = fs.readFileSync(new URL('../js/text.js', import.meta.url), 'utf8');
+  for (const name of ['Le Bâton-mousse', 'La Pelle-mousse', 'Éclateur']) assert.ok(copy.includes(name), name);
+  assert.match(copy, /mousse|fléchette/i);
+  assert.doesNotMatch(copy, /hockey|mêlée|corps à corps|pelle-fusil|rondelle/i);
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(html, /fléchette/i);
